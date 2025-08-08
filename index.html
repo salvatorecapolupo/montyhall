@@ -1,108 +1,185 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-
-export default function MontyHallSimulator() {
-  const [results, setResults] = useState({ switchWins: 0, stayWins: 0 });
-  const [log, setLog] = useState([]);
-  const [simulating, setSimulating] = useState(false);
-
-  const simulate = () => {
-    const trials = 1000;
-    let switchWins = 0;
-    let stayWins = 0;
-    const detailedLog = [];
-
-    for (let i = 0; i < trials; i++) {
-      const prizeDoor = Math.floor(Math.random() * 3);
-      const initialChoice = Math.floor(Math.random() * 3);
-
-      // Monty reveals a goat door
-      const possibleReveals = [0, 1, 2].filter(
-        (door) => door !== initialChoice && door !== prizeDoor
-      );
-      const montyOpens = possibleReveals[Math.floor(Math.random() * possibleReveals.length)];
-
-      // Player switches to the remaining unopened door
-      const switchChoice = [0, 1, 2].find(
-        (door) => door !== initialChoice && door !== montyOpens
-      );
-
-      const didSwitchWin = switchChoice === prizeDoor;
-      const didStayWin = initialChoice === prizeDoor;
-
-      if (didSwitchWin) switchWins++;
-      if (didStayWin) stayWins++;
-
-      detailedLog.push({
-        trial: i + 1,
-        prizeDoor,
-        initialChoice,
-        montyOpens,
-        switchChoice,
-        result: didSwitchWin ? "Switch Win" : didStayWin ? "Stay Win" : "Error"
-      });
-    }
-
-    setResults({ switchWins, stayWins });
-    setLog(detailedLog);
-    setSimulating(false);
-  };
-
-  return (
-    <div className="p-6 space-y-6 max-w-4xl mx-auto">
-      <h1 className="text-3xl font-bold text-center">Simulatore Monty Hall</h1>
-
-      <p className="text-base">
-        Nel problema di Monty Hall, ci sono tre porte. Dietro una c'è un premio, dietro le altre due ci sono capre. 
-        Scegli una porta. Il presentatore, che sa cosa c'è dietro, apre una delle altre due porte, rivelando sempre una capra.
-        Ti offre quindi la possibilità di cambiare scelta. Conviene cambiare? Questo simulatore lo dimostra:
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Simulatore Monty Hall</title>
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    .goat { color: brown; }
+    .car { color: green; }
+    .door { cursor: pointer; }
+  </style>
+</head>
+<body class="bg-light">
+  <div class="container py-5">
+    <h1 class="text-center mb-4">Simulatore del Gioco di Monty Hall</h1>
+    <div class="mb-4">
+      <h3>Modalità Interattiva</h3>
+      <p>
+        Scegli una porta. Monty aprirà una porta con una capra, poi potrai decidere se cambiare. Accumula premi o capre e osserva come cambia la probabilità!
       </p>
-
-      <div className="flex justify-center">
-        <Button onClick={() => { setSimulating(true); simulate(); }} disabled={simulating}>
-          {simulating ? "Simulazione in corso..." : "Esegui 1000 simulazioni"}
-        </Button>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <h2 className="text-xl font-semibold">Risultati</h2>
-            <p><strong>Vittorie cambiando porta:</strong> {results.switchWins}</p>
-            <p><strong>Vittorie mantenendo la scelta:</strong> {results.stayWins}</p>
-            <p className="mt-2">
-              <strong>Percentuale di vittoria cambiando:</strong> {((results.switchWins / 1000) * 100).toFixed(1)}%
-            </p>
-            <p>
-              <strong>Percentuale di vittoria restando:</strong> {((results.stayWins / 1000) * 100).toFixed(1)}%
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4 max-h-96 overflow-y-scroll">
-            <h2 className="text-xl font-semibold">Log dettagliato</h2>
-            <ul className="text-sm space-y-1">
-              {log.map((entry) => (
-                <li key={entry.trial}>
-                  <strong>#{entry.trial}:</strong> Premio: {entry.prizeDoor}, Scelta iniziale: {entry.initialChoice}, Monty apre: {entry.montyOpens}, Scelta dopo cambio: {entry.switchChoice} → <span className="font-medium">{entry.result}</span>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="mt-6">
-        <h2 className="text-xl font-bold">Spiegazione della probabilità</h2>
-        <p className="mt-2">
-          Quando scegli una porta inizialmente, hai 1 possibilità su 3 (≈33.3%) di scegliere il premio.
-          Dopo che Monty apre una porta con una capra, se cambi scelta, hai 2 possibilità su 3 (≈66.7%) di vincere.
-          Questo perché la probabilità che il premio fosse dietro una delle altre due porte (2/3) si "trasferisce" alla porta rimanente.
-          Il simulatore lo dimostra: cambiando si vince circa il doppio delle volte rispetto a rimanere.
-        </p>
+      <div id="doors" class="d-flex gap-3 mb-3"></div>
+      <div id="game-status" class="mb-3"></div>
+      <div>
+        <button class="btn btn-secondary" onclick="resetGame()">Reset Gioco</button>
       </div>
     </div>
-  );
-}
+
+    <hr />
+
+    <div class="mb-4">
+      <h3>Modalità Automatica (1000 simulazioni)</h3>
+      <button class="btn btn-primary mb-3" onclick="runSimulations()">Esegui simulazioni</button>
+      <div id="auto-results"></div>
+    </div>
+
+    <canvas id="probChart" height="100"></canvas>
+  </div>
+
+  <script>
+    let playerStats = { car: 0, goat: 0, history: [] };
+    let game = {};
+
+    function initGame() {
+      game = {
+        prizeDoor: Math.floor(Math.random() * 3),
+        playerChoice: null,
+        montyOpens: null,
+        revealed: false
+      };
+
+      const doors = document.getElementById("doors");
+      doors.innerHTML = "";
+
+      for (let i = 0; i < 3; i++) {
+        const btn = document.createElement("button");
+        btn.className = "btn btn-outline-primary door";
+        btn.innerText = `Porta ${i + 1}`;
+        btn.onclick = () => makeInitialChoice(i);
+        doors.appendChild(btn);
+      }
+
+      document.getElementById("game-status").innerHTML = "Scegli una porta.";
+    }
+
+    function makeInitialChoice(choice) {
+      game.playerChoice = choice;
+
+      const possibleReveals = [0, 1, 2].filter(
+        d => d !== choice && d !== game.prizeDoor
+      );
+      game.montyOpens = possibleReveals[Math.floor(Math.random() * possibleReveals.length)];
+      game.revealed = true;
+
+      document.getElementById("game-status").innerHTML = `Monty apre la porta ${game.montyOpens + 1} e c'è una capra. Vuoi cambiare porta?`;
+
+      const doors = document.getElementById("doors");
+      doors.innerHTML = "";
+
+      for (let i = 0; i < 3; i++) {
+        if (i === game.montyOpens) {
+          const btn = document.createElement("button");
+          btn.className = "btn btn-outline-secondary disabled";
+          btn.innerText = `Porta ${i + 1} (Capra)`;
+          doors.appendChild(btn);
+        } else {
+          const btn = document.createElement("button");
+          btn.className = "btn btn-success";
+          btn.innerText = `Scegli Porta ${i + 1}`;
+          btn.onclick = () => finalizeChoice(i);
+          doors.appendChild(btn);
+        }
+      }
+    }
+
+    function finalizeChoice(finalChoice) {
+      const win = finalChoice === game.prizeDoor;
+      if (win) playerStats.car++;
+      else playerStats.goat++;
+
+      playerStats.history.push(playerStats.car / (playerStats.car + playerStats.goat));
+      updateChart();
+
+      document.getElementById("game-status").innerHTML = win
+        ? `<span class='car'>Hai VINTO una macchinina!</span>`
+        : `<span class='goat'>Hai trovato una capra!</span>`;
+
+      const summary = document.createElement("p");
+      summary.innerHTML = `Totale: ${playerStats.car} macchinine, ${playerStats.goat} capre.`;
+      document.getElementById("game-status").appendChild(summary);
+
+      setTimeout(initGame, 1500);
+    }
+
+    function resetGame() {
+      playerStats = { car: 0, goat: 0, history: [] };
+      updateChart();
+      initGame();
+    }
+
+    function runSimulations() {
+      let switchWins = 0, stayWins = 0;
+      const trials = 1000;
+
+      for (let i = 0; i < trials; i++) {
+        const prizeDoor = Math.floor(Math.random() * 3);
+        const initialChoice = Math.floor(Math.random() * 3);
+        const possibleReveals = [0, 1, 2].filter(
+          d => d !== initialChoice && d !== prizeDoor
+        );
+        const montyOpens = possibleReveals[Math.floor(Math.random() * possibleReveals.length)];
+        const switchChoice = [0, 1, 2].find(
+          d => d !== initialChoice && d !== montyOpens
+        );
+
+        if (switchChoice === prizeDoor) switchWins++;
+        if (initialChoice === prizeDoor) stayWins++;
+      }
+
+      const div = document.getElementById("auto-results");
+      div.innerHTML = `
+        <p><strong>Cambiando porta:</strong> ${switchWins} vittorie (${(switchWins/trials*100).toFixed(1)}%)</p>
+        <p><strong>Restando sulla stessa:</strong> ${stayWins} vittorie (${(stayWins/trials*100).toFixed(1)}%)</p>
+      `;
+    }
+
+    let chart;
+    function updateChart() {
+      const ctx = document.getElementById("probChart").getContext("2d");
+      if (!chart) {
+        chart = new Chart(ctx, {
+          type: "line",
+          data: {
+            labels: playerStats.history.map((_, i) => i + 1),
+            datasets: [
+              {
+                label: "% Vittorie Cumulative (interattivo)",
+                data: playerStats.history.map(v => (v * 100).toFixed(2)),
+                fill: false,
+                borderColor: "blue",
+                tension: 0.1
+              }
+            ]
+          },
+          options: {
+            scales: {
+              y: { min: 0, max: 100 }
+            }
+          }
+        });
+      } else {
+        chart.data.labels = playerStats.history.map((_, i) => i + 1);
+        chart.data.datasets[0].data = playerStats.history.map(v => (v * 100).toFixed(2));
+        chart.update();
+      }
+    }
+
+    initGame();
+  </script>
+</body>
+</html>
