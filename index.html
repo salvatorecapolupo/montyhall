@@ -1,0 +1,108 @@
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+
+export default function MontyHallSimulator() {
+  const [results, setResults] = useState({ switchWins: 0, stayWins: 0 });
+  const [log, setLog] = useState([]);
+  const [simulating, setSimulating] = useState(false);
+
+  const simulate = () => {
+    const trials = 1000;
+    let switchWins = 0;
+    let stayWins = 0;
+    const detailedLog = [];
+
+    for (let i = 0; i < trials; i++) {
+      const prizeDoor = Math.floor(Math.random() * 3);
+      const initialChoice = Math.floor(Math.random() * 3);
+
+      // Monty reveals a goat door
+      const possibleReveals = [0, 1, 2].filter(
+        (door) => door !== initialChoice && door !== prizeDoor
+      );
+      const montyOpens = possibleReveals[Math.floor(Math.random() * possibleReveals.length)];
+
+      // Player switches to the remaining unopened door
+      const switchChoice = [0, 1, 2].find(
+        (door) => door !== initialChoice && door !== montyOpens
+      );
+
+      const didSwitchWin = switchChoice === prizeDoor;
+      const didStayWin = initialChoice === prizeDoor;
+
+      if (didSwitchWin) switchWins++;
+      if (didStayWin) stayWins++;
+
+      detailedLog.push({
+        trial: i + 1,
+        prizeDoor,
+        initialChoice,
+        montyOpens,
+        switchChoice,
+        result: didSwitchWin ? "Switch Win" : didStayWin ? "Stay Win" : "Error"
+      });
+    }
+
+    setResults({ switchWins, stayWins });
+    setLog(detailedLog);
+    setSimulating(false);
+  };
+
+  return (
+    <div className="p-6 space-y-6 max-w-4xl mx-auto">
+      <h1 className="text-3xl font-bold text-center">Simulatore Monty Hall</h1>
+
+      <p className="text-base">
+        Nel problema di Monty Hall, ci sono tre porte. Dietro una c'è un premio, dietro le altre due ci sono capre. 
+        Scegli una porta. Il presentatore, che sa cosa c'è dietro, apre una delle altre due porte, rivelando sempre una capra.
+        Ti offre quindi la possibilità di cambiare scelta. Conviene cambiare? Questo simulatore lo dimostra:
+      </p>
+
+      <div className="flex justify-center">
+        <Button onClick={() => { setSimulating(true); simulate(); }} disabled={simulating}>
+          {simulating ? "Simulazione in corso..." : "Esegui 1000 simulazioni"}
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <h2 className="text-xl font-semibold">Risultati</h2>
+            <p><strong>Vittorie cambiando porta:</strong> {results.switchWins}</p>
+            <p><strong>Vittorie mantenendo la scelta:</strong> {results.stayWins}</p>
+            <p className="mt-2">
+              <strong>Percentuale di vittoria cambiando:</strong> {((results.switchWins / 1000) * 100).toFixed(1)}%
+            </p>
+            <p>
+              <strong>Percentuale di vittoria restando:</strong> {((results.stayWins / 1000) * 100).toFixed(1)}%
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4 max-h-96 overflow-y-scroll">
+            <h2 className="text-xl font-semibold">Log dettagliato</h2>
+            <ul className="text-sm space-y-1">
+              {log.map((entry) => (
+                <li key={entry.trial}>
+                  <strong>#{entry.trial}:</strong> Premio: {entry.prizeDoor}, Scelta iniziale: {entry.initialChoice}, Monty apre: {entry.montyOpens}, Scelta dopo cambio: {entry.switchChoice} → <span className="font-medium">{entry.result}</span>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="mt-6">
+        <h2 className="text-xl font-bold">Spiegazione della probabilità</h2>
+        <p className="mt-2">
+          Quando scegli una porta inizialmente, hai 1 possibilità su 3 (≈33.3%) di scegliere il premio.
+          Dopo che Monty apre una porta con una capra, se cambi scelta, hai 2 possibilità su 3 (≈66.7%) di vincere.
+          Questo perché la probabilità che il premio fosse dietro una delle altre due porte (2/3) si "trasferisce" alla porta rimanente.
+          Il simulatore lo dimostra: cambiando si vince circa il doppio delle volte rispetto a rimanere.
+        </p>
+      </div>
+    </div>
+  );
+}
