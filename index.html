@@ -13,6 +13,9 @@
     .goat { color: brown; }
     .car { color: green; }
     .door { cursor: pointer; }
+    .chosen { background-color: #ffd966 !important; }
+    .highlight-choice { border: 2px solid #000; }
+    .door-img { width: 50px; margin-top: 5px; }
   </style>
 </head>
 <body class="bg-light">
@@ -21,7 +24,7 @@
     <div class="mb-4">
       <h3>Modalità Interattiva</h3>
       <p>
-        Scegli una porta. Monty aprirà una porta con una capra, poi potrai decidere se cambiare. Accumula premi o capre e osserva come cambia la probabilità!
+        Scegli una porta cliccando su una delle tre. Dopo che Monty apre una porta con una <strong>capra</strong>, puoi decidere se <strong>cambiare la tua scelta</strong>. La tua scelta attuale sarà evidenziata in giallo.
       </p>
       <div id="doors" class="d-flex gap-3 mb-3"></div>
       <div id="game-status" class="mb-3"></div>
@@ -58,9 +61,10 @@
 
       for (let i = 0; i < 3; i++) {
         const btn = document.createElement("button");
-        btn.className = "btn btn-outline-primary door";
+        btn.className = "btn btn-outline-primary door d-flex flex-column align-items-center";
         btn.innerText = `Porta ${i + 1}`;
         btn.onclick = () => makeInitialChoice(i);
+        btn.dataset.index = i;
         doors.appendChild(btn);
       }
 
@@ -68,6 +72,7 @@
     }
 
     function makeInitialChoice(choice) {
+      if (game.playerChoice !== null) return; // scelta già fatta
       game.playerChoice = choice;
 
       const possibleReveals = [0, 1, 2].filter(
@@ -76,25 +81,29 @@
       game.montyOpens = possibleReveals[Math.floor(Math.random() * possibleReveals.length)];
       game.revealed = true;
 
-      document.getElementById("game-status").innerHTML = `Monty apre la porta ${game.montyOpens + 1} e c'è una capra. Vuoi cambiare porta?`;
-
       const doors = document.getElementById("doors");
       doors.innerHTML = "";
 
       for (let i = 0; i < 3; i++) {
+        const btn = document.createElement("button");
+        btn.className = "btn door d-flex flex-column align-items-center";
+        btn.dataset.index = i;
+
         if (i === game.montyOpens) {
-          const btn = document.createElement("button");
-          btn.className = "btn btn-outline-secondary disabled";
-          btn.innerText = `Porta ${i + 1} (Capra)`;
-          doors.appendChild(btn);
+          btn.classList.add("btn-outline-secondary", "disabled");
+          btn.innerHTML = `Porta ${i + 1}<br><img src='./capra.png' alt='Capra' class='door-img' />`;
         } else {
-          const btn = document.createElement("button");
-          btn.className = "btn btn-success";
-          btn.innerText = `Scegli Porta ${i + 1}`;
+          btn.classList.add("btn-outline-success");
+          if (i === game.playerChoice) {
+            btn.classList.add("chosen");
+          }
+          btn.innerHTML = `Porta ${i + 1}`;
           btn.onclick = () => finalizeChoice(i);
-          doors.appendChild(btn);
         }
+        doors.appendChild(btn);
       }
+
+      document.getElementById("game-status").innerHTML = `Monty apre la porta ${game.montyOpens + 1} e c'è una capra. <br>La tua scelta attuale è la porta ${game.playerChoice + 1}. Vuoi cambiarla?`;
     }
 
     function finalizeChoice(finalChoice) {
@@ -106,14 +115,14 @@
       updateChart();
 
       document.getElementById("game-status").innerHTML = win
-        ? `<span class='car'>Hai VINTO una macchinina!</span>`
-        : `<span class='goat'>Hai trovato una capra!</span>`;
+        ? `<span class='car'>Hai VINTO una macchinina!</span><br><img src='./macchina.png' alt='Macchinina' class='door-img' />`
+        : `<span class='goat'>Hai trovato una capra!</span><br><img src='./capra.png' alt='Capra' class='door-img' />`;
 
       const summary = document.createElement("p");
       summary.innerHTML = `Totale: ${playerStats.car} macchinine, ${playerStats.goat} capre.`;
       document.getElementById("game-status").appendChild(summary);
 
-      setTimeout(initGame, 1500);
+      setTimeout(initGame, 2000);
     }
 
     function resetGame() {
