@@ -168,7 +168,8 @@
             datasets: [
               {
                 label: "% Vittorie Cumulative (interattivo)",
-                data: playerStats.history.map(v => (v * 100).toFixed(2)),
+                // data: playerStats.history.map(v => (v * 100).toFixed(2)),
+                data: playerStats.history.map(v => v * 100)
                 fill: false,
                 borderColor: "blue",
                 tension: 0.1
