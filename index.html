@@ -112,4 +112,107 @@
       } catch(e){ logError(e); }
     }
 
-    function f
+    function finalizeChoice(finalChoice) {
+      try {
+        const win = finalChoice === game.prizeDoor;
+        if(win) playerStats.car++; else playerStats.goat++;
+        playerStats.history.push(playerStats.car/(playerStats.car+playerStats.goat));
+        console.log("Scelta finale:", finalChoice, "Vittoria:", win);
+        updateChart();
+
+        const status = document.getElementById("game-status");
+        status.innerHTML = win
+          ? `<span class='car'>Hai VINTO una macchinina!</span><br><img src='./macchina.png' alt='Macchinina' class='door-img' />`
+          : `<span class='goat'>Hai trovato una capra!</span><br><img src='./capra.png' alt='Capra' class='door-img' />`;
+
+        const summary = document.createElement("p");
+        summary.innerHTML = `Totale: ${playerStats.car} macchinine, ${playerStats.goat} capre.`;
+        status.appendChild(summary);
+
+        setTimeout(initGame, 2000);
+      } catch(e){ logError(e); }
+    }
+
+    function resetGame() {
+      try {
+        console.log("Reset gioco");
+        playerStats = { car: 0, goat: 0, history: [] };
+        updateChart();
+        initGame();
+      } catch(e){ logError(e); }
+    }
+
+    function runSimulations() {
+      try {
+        console.log("Simulazioni automatiche");
+        let switchWins = 0, stayWins = 0;
+        const trials = 1000;
+
+        for(let i=0;i<trials;i++){
+          const prizeDoor = Math.floor(Math.random()*3);
+          const initialChoice = Math.floor(Math.random()*3);
+          const possibleReveals = [0,1,2].filter(d=>d!==initialChoice && d!==prizeDoor);
+          const montyOpens = possibleReveals[Math.floor(Math.random()*possibleReveals.length)];
+          const switchChoice = [0,1,2].find(d=>d!==initialChoice && d!==montyOpens);
+
+          if(switchChoice===prizeDoor) switchWins++;
+          if(initialChoice===prizeDoor) stayWins++;
+        }
+
+        const div = document.getElementById("auto-results");
+        div.innerHTML = `
+          <p><strong>Cambiando porta:</strong> ${switchWins} vittorie (${(switchWins/1000*100).toFixed(1)}%)</p>
+          <p><strong>Restando sulla stessa:</strong> ${stayWins} vittorie (${(stayWins/1000*100).toFixed(1)}%)</p>
+        `;
+        console.log("Risultati simulazioni:", { switchWins, stayWins });
+      } catch(e){ logError(e); }
+    }
+
+    function updateChart() {
+      try {
+        const ctx = document.getElementById("probChart").getContext("2d");
+        const dataPoints = playerStats.history.length
+          ? playerStats.history.map(v => v*100)
+          : [0];
+        const labels = playerStats.history.length
+          ? dataPoints.map((_,i)=>i+1)
+          : [1];
+
+        if(!chart){
+          chart = new Chart(ctx, {
+            type: "line",
+            data: {
+              labels: labels,
+              datasets:[{
+                label: "% Vittorie Cumulative",
+                data: dataPoints,
+                fill:false,
+                borderColor:"blue",
+                tension:0.1,
+                pointRadius:3
+              }]
+            },
+            options:{
+              responsive:true,
+              maintainAspectRatio:false,
+              scales:{
+                y:{min:0,max:100},
+                x:{title:{display:true,text:"Partita"}}
+              }
+            }
+          });
+          console.log("Chart inizializzato");
+        } else {
+          chart.data.labels = labels;
+          chart.data.datasets[0].data = dataPoints;
+          chart.update();
+          console.log("Chart aggiornato:", dataPoints);
+        }
+      } catch(e){ logError(e); }
+    }
+
+    // Inizializza tutto
+    initGame();
+  </script>
+</body>
+</html>
